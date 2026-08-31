@@ -1,0 +1,42 @@
+{
+  "model": "Qwen/Qwen2.5-Coder-14B-Instruct",
+  "baseline_ppl": 1.7460433781819809,
+  "baseline_ppl_recovery_domain": 1.946123812764173,
+  "hidden_dim": 5120,
+  "intermediate_dim": 13824,
+  "ffn_params_orig": 212336640,
+  "n_test": 12,
+  "n_recovery": 500,
+  "runs": [
+    {
+      "rank": 16,
+      "ffn_params": 909312,
+      "compression_ratio": 233.51351351351352,
+      "ppl_cold": 1.8491827013672126,
+      "delta_cold_pct": 5.907030974947647,
+      "ppl_warm": 1.7688891444752326,
+      "delta_warm_pct": 1.308430625420054,
+      "recovery_seconds": 4.643012046813965
+    },
+    {
+      "rank": 32,
+      "ffn_params": 1818624,
+      "compression_ratio": 116.75675675675676,
+      "ppl_cold": 1.851111493160095,
+      "delta_cold_pct": 6.0174974053344155,
+      "ppl_warm": 1.7811314482054823,
+      "delta_warm_pct": 2.0095760770866944,
+      "recovery_seconds": 4.435848951339722
+    },
+    {
+      "rank": 64,
+      "ffn_params": 3637248,
+      "compression_ratio": 58.37837837837838,
+      "ppl_cold": 1.8454152921011369,
+      "delta_cold_pct": 5.691262608986514,
+      "ppl_warm": 1.797941312782139,
+      "delta_warm_pct": 2.9723164526528345,
+      "recovery_seconds": 4.44304895401001
+    }
+  ]
+}

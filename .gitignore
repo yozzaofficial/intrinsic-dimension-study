@@ -1,0 +1,69 @@
+# ── Python ─────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+.Python
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# ── ML / model checkpoints (PESANTI) ────────────────
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+*.gguf
+*.onnx
+*.h5
+student_checkpoint.pt
+*_checkpoint*.pt
+
+# ── Cache HuggingFace (fuori repo, ma per sicurezza) ─
+.hf_cache/
+hf_cache/
+.cache/
+models/
+weights/
+
+# ── Dataset raw / grandi ────────────────────────────
+*.parquet
+*.arrow
+*.jsonl
+*.tar.gz
+*.zip
+data/raw/
+data/*/corpus/
+data/*/tokenized/
+
+# ── Log e output verbose degli esperimenti ──────────
+*.log
+outputs/
+runs/
+wandb/
+tensorboard/
+lightning_logs/
+
+# ── OS / editor ─────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Segreti ─────────────────────────────────────────
+.env
+.env.local
+*.pem
+*.key
+credentials.json
+
+# ── Neo4j (mai nel repo — è servizio esterno) ───────
+neo4j_data/
+*.db

@@ -1,0 +1,140 @@
+{
+  "experiment": "Knowledge Graph + Reasoning Model (navigation UI domain)",
+  "date": "2026-08-20",
+  "hypothesis": "Un modello 'ragionatore' su M2 16GB può usare un knowledge graph curato (Neo4j) per rispondere a richieste UI in modo verificabile, dimostrando che grafo strutturato > contesto piatto.",
+
+  "infrastructure": {
+    "graph_db": "Neo4j 5 (Homebrew, bolt://localhost:7687)",
+    "graph_seed_domain": "React navigation UI",
+    "nodes_count": 34,
+    "relations_count": 44,
+    "nodes_by_type": {
+      "CSSProperty": 10,
+      "HTMLElement": 5,
+      "AriaRole": 4,
+      "AriaAttribute": 4,
+      "Pattern": 4,
+      "Technique": 3,
+      "Problem": 2,
+      "Solution": 2
+    },
+    "relations_by_type": {
+      "USES": 27,
+      "REQUIRES": 6,
+      "SEE_ALSO": 5,
+      "ALTERNATIVE_TO": 3,
+      "SOLVES": 2,
+      "COMPOSES": 1
+    },
+    "content_source": "MDN Web Docs (cache locale in rag_system/manuals_cache)"
+  },
+
+  "components": {
+    "schema.py": "Node/relation type definitions + validators",
+    "kb.py": "KnowledgeBase Neo4j wrapper (add_node, add_relation, find_by_text fulltext, neighbors traversal, shortestPath)",
+    "seed_navigation.py": "Popola KB con 34 nodi curati per navigation UI",
+    "kb_reasoner.py": "Loop plan → retrieve → answer (retrieve once, context passivo)",
+    "kb_navigator.py": "Loop iterativo SEARCH/VISIT/FOLLOW/ANSWER, grafo come substrato del ragionamento"
+  },
+
+  "test_1_kb_reasoner_with_3B_model": {
+    "model_planner": "qwen2.5:3b-instruct-q4_K_M",
+    "model_answerer": "qwen2.5:3b-instruct-q4_K_M",
+    "question": "come faccio un hamburger menu accessibile con la tastiera in React?",
+    "plan": {
+      "search_queries": ["hamburger menu", "keyboard navigation"],
+      "expand_nodes": ["pattern-hamburger-menu"],
+      "reasoning": "Need the hamburger pattern and its accessibility requirements."
+    },
+    "retrieved_nodes": [
+      "aria-role-navigation", "css-display", "pattern-dropdown-menu",
+      "css-transition", "aria-attr-expanded", "aria-attr-label",
+      "html-button", "pattern-hamburger-menu",
+      "problem-menu-keyboard-inaccessible", "html-nav",
+      "tech-click-outside-close", "tech-keyboard-navigation"
+    ],
+    "n_relations_in_subgraph": 15,
+    "timing_seconds": {"plan": 4.1, "retrieve": 0.1, "answer": 22.7, "total": 27.0},
+    "answer_quality_notes": {
+      "correct": "Usa aria-expanded, aria-controls, aria-label corretti; struttura React idiomatica (useState, useRef, useEffect); pattern click-outside implementato correttamente",
+      "incorrect_or_missing": [
+        "Non ha citato nessun node id in brackets (istruzione ignorata)",
+        "Non ha implementato keyboard handling reale (Escape, arrow keys) nonostante tech-keyboard-navigation fosse nel contesto",
+        "Non ha usato focus trap (a parole 'ensure focus moves')"
+      ],
+      "verdict": "Il 3B usa la KB come ispirazione ma non come fonte autoritativa. Il grafo funziona; il modello non lo sfrutta a fondo."
+    }
+  },
+
+  "test_2_kb_navigator_deepseek_r1_7B": {
+    "model": "deepseek-r1:7b",
+    "protocol": "Iterative navigation with SEARCH/VISIT/FOLLOW/ANSWER JSON actions per turn",
+    "attempt_1_result": {
+      "steps_taken": 1,
+      "action_parsed": null,
+      "issue": "Il modello ha emesso 6 azioni JSON in un unico turno + prosa mescolata. Il parser strict ha fallito.",
+      "raw_output_sample": "Multiple {action: SEARCH} + prosa esplicativa + azioni inventate con rel_type inesistenti (TRIGGERS, TOOLTIP, DROPS Menus)",
+      "root_cause": "num_predict=600 troppo basso: R1 usa quasi tutti i token dentro <think>, non arriva mai al JSON strutturato"
+    },
+    "attempt_2_result": {
+      "fix_applied": "num_predict aumentato a 2500; parser tollerante (accetta prima action valida in un testo con multi-block)",
+      "steps_taken": 1,
+      "first_action": {
+        "action": "SEARCH",
+        "query": "How to create an accessible hamburger menu in React using semantic HTML and Tailwind CSS?"
+      },
+      "step_time_seconds": 64.2,
+      "search_result_quality": "5 risultati fulltext ma dominati da nodi generici (css-position) invece del pattern-hamburger-menu diretto — query di ricerca troppo verbosa",
+      "run_status": "In corso, ma ogni step ~40-60s → una risposta completa richiede 3-8 minuti (tempo utente proibitivo)"
+    },
+    "verdict": "DeepSeek-R1-7B ragiona bene su problemi singoli ma non segue protocolli agentici multi-turn. Il reasoning verboso (che è la sua forza per la matematica) è un limite per protocolli JSON strutturati stretti."
+  },
+
+  "test_3_baseline_no_graph_deepseek_r1_7B": {
+    "model": "deepseek-r1:7b",
+    "context": "nessuno — modello puro",
+    "question": "come faccio un hamburger menu accessibile con la tastiera in React?",
+    "time_seconds": 59.8,
+    "output_quality": "DISASTRO",
+    "issues_detected": [
+      "Codice HTML+JS puro invece che React (nonostante 'in React' esplicito)",
+      "'freccia del pavimento' invece di ArrowUp — hallucination linguistica",
+      "id='hamburgerMenu' con spazio davanti (' hamburgerMenu') — bug testuale",
+      "Logica errata: apre/chiude il menu con ArrowUp",
+      "Testo cinese misto: 'Pronto, sarai引导 towards the content'",
+      "Tailwind CSS senza import né riferimento",
+      "Doppio addEventListener senza cleanup"
+    ],
+    "verdict": "Il 7B senza contesto allucina completamente. Baseline stabilisce che la KB porterebbe valore ENORME — se il modello la sapesse usare."
+  },
+
+  "conclusions": {
+    "graph_infrastructure_works": true,
+    "graph_infrastructure_evidence": [
+      "34 nodi popolati correttamente da MDN",
+      "Query fulltext (5 risultati sub-100ms)",
+      "Traversal typed (12 vicini a depth=1 in <100ms)",
+      "ShortestPath tra nodi funziona",
+      "Il kb_reasoner produce un sottografo di 12 nodi + 15 relazioni pertinenti in 4.2s"
+    ],
+    "reasoning_model_bottleneck": true,
+    "reasoning_model_evidence": [
+      "Qwen2.5-Coder-14B è troppo lento su M2 16GB (~40-60s/turno)",
+      "Qwen2.5:3B ragiona veloce ma non tratta la KB come autoritativa",
+      "DeepSeek-R1-7B ragiona per matematica ma non segue protocolli agentici JSON",
+      "Nessun modello 'reasoning tuned' esistente in quella fascia parametri è ottimizzato per navigazione grafo iterativa"
+    ],
+    "architectural_finding": "Il vero limite non è il grafo (funziona), non è il modello di generazione (funziona), è il PROTOCOLLO agentico multi-turn con JSON strutturato in modelli non-tuned per tool use.",
+    "next_steps_considered": [
+      "Fine-tune 500M-1.5B pre-addestrato per graph navigation (100k esempi sintetici)",
+      "Router 30-70M encoder-only (MiniLM/DistilBERT) come primo strato: capisce richiesta → decide sotto-modello / query grafo",
+      "Semplificare il protocollo a decisioni pilotate dal codice invece che dal modello (grafo come primary, LLM come descrittore finale)"
+    ]
+  },
+
+  "hardware": {
+    "device": "Mac M2 16GB unified memory",
+    "runtime": "ollama (GGUF quantized models)",
+    "graph_db": "Neo4j 5 native process"
+  }
+}
